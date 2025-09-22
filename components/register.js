@@ -250,7 +250,7 @@ export default function RegisterPage() {
 
                     {registeredUser.image && (
                       <div className="mt-6">
-                        <img
+                        <Image
                           src={registeredUser.image || "/placeholder.svg"}
                           alt={`${registeredUser.name}'s photo`}
                           className="w-full rounded-xl shadow-lg border border-white/10"

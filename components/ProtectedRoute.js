@@ -1,61 +1,64 @@
 "use client";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+
+import { useEffect, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuthContext } from "@/contexts/AuthContext";
 
 export default function ProtectedRoute({
   children,
-  allowedRoles = [],
+  allowedRoles = null, // null = all roles allowed
   requireEmailVerification = true,
 }) {
   const { user, userProfile, loading, isAuthenticated, hasProfile } =
     useAuthContext();
   const router = useRouter();
+  const pathname = usePathname();
+  const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
-    if (loading) return; // Wait for auth state to load
+    if (loading) return;
 
-    // Redirect to auth if not authenticated
+    // Not logged in → go to auth
     if (!isAuthenticated) {
-      router.push("/auth");
+      safeRedirect("/auth");
       return;
     }
 
-    // Redirect to verify if email not verified and required
+    // Email not verified (if required) → go to verify page
     if (requireEmailVerification && user && !user.emailVerified) {
-      router.push("/verify");
+      safeRedirect("/verify");
       return;
     }
 
-    // Redirect to profile if no user profile exists
+    // No profile yet → force profile creation
     if (isAuthenticated && !hasProfile) {
-      router.push("/profile");
+      safeRedirect("/profile");
       return;
     }
 
-    // Check role permissions
+    // Role-based access control
     if (
-      allowedRoles.length > 0 &&
+      allowedRoles && // only check if not null
       userProfile &&
       !allowedRoles.includes(userProfile.role)
     ) {
-      // Redirect to appropriate dashboard based on user's role
+      // redirect user to their dashboard
+      let target = "/auth"; // fallback
       switch (userProfile.role) {
         case "student":
-          router.push("/student/dashboard");
+          target = "/student/dashboard";
           break;
         case "teacher":
-          router.push("/teacher/dashboard");
+          target = "/teacher/dashboard";
           break;
         case "institute":
-          router.push("/institute/dashboard");
+          target = "/institute/dashboard";
           break;
         case "admin":
-          router.push("/admin/dashboard");
+          target = "/admin/dashboard";
           break;
-        default:
-          router.push("/auth");
       }
+      safeRedirect(target);
       return;
     }
   }, [
@@ -64,13 +67,20 @@ export default function ProtectedRoute({
     loading,
     isAuthenticated,
     hasProfile,
-    router,
-    allowedRoles,
     requireEmailVerification,
+    allowedRoles,
   ]);
 
-  // Show loading spinner while checking auth
-  if (loading) {
+  // Prevent infinite redirects by checking current pathname
+  const safeRedirect = (target) => {
+    if (pathname !== target) {
+      setRedirecting(true);
+      router.push(target);
+    }
+  };
+
+  // Loading spinner while auth state is resolving
+  if (loading || redirecting) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="text-center">
@@ -81,24 +91,12 @@ export default function ProtectedRoute({
     );
   }
 
-  // Show nothing while redirecting
-  if (!isAuthenticated || !hasProfile) {
+  // If redirect conditions triggered, don’t render children
+  if (!isAuthenticated || !hasProfile) return null;
+  if (requireEmailVerification && user && !user.emailVerified) return null;
+  if (allowedRoles && userProfile && !allowedRoles.includes(userProfile.role))
     return null;
-  }
 
-  // Check email verification
-  if (requireEmailVerification && user && !user.emailVerified) {
-    return null;
-  }
-
-  // Check role permissions
-  if (
-    allowedRoles.length > 0 &&
-    userProfile &&
-    !allowedRoles.includes(userProfile.role)
-  ) {
-    return null;
-  }
-
+  // ✅ Allowed → show children
   return children;
 }

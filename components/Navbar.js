@@ -21,6 +21,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
+import Image from "next/image";
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -149,7 +150,7 @@ export function Navbar() {
       <div className="fixed w-full top-0 z-51 h-20 bg-gradient-to-b from-black/60 via-black/20 to-transparent pointer-events-none" />
 
       <nav
-        className={`fixed w-full top-0 z-52 transition-all duration-500 ease-in-out ${
+        className={`fixed w-full top-0 z-52 transition-all duration-100 ease-in-out ${
           scrolled
             ? "backdrop-blur-3xl border-b border-white/20 bg-black/40 shadow-2xl shadow-black/50"
             : "backdrop-blur-2xl border-b border-white/10 bg-black/20"
@@ -228,9 +229,11 @@ export function Navbar() {
                     >
                       <div className="relative">
                         {getUserPhoto() ? (
-                          <img
+                          <Image
                             src={getUserPhoto()}
                             alt="Profile"
+                            width={100}
+                            height={100}
                             className="w-10 h-10 rounded-full border-2 border-accent/50 group-hover:border-accent transition-all duration-300 object-cover group-hover:scale-110 shadow-lg"
                             onError={(e) => {
                               e.target.style.display = "none";
@@ -265,15 +268,17 @@ export function Navbar() {
 
                     {/* Enhanced Dropdown Menu */}
                     {isDropdownOpen && (
-                      <div className="absolute right-0 mt-3 min-w-56 bg-black/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/20 py-2 z-52 animate-in slide-in-from-top-2 duration-200">
+                      <div className="absolute right-0 mt-3 min-w-64 bg-black/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/20 py-2 z-52 animate-in slide-in-from-top-2 duration-200">
                         <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-2xl" />
 
                         <div className="relative px-4 py-4 border-b border-white/10">
                           <div className="flex items-center space-x-3">
                             {getUserPhoto() ? (
-                              <img
+                              <Image
                                 src={getUserPhoto()}
                                 alt="Profile"
+                                width={100}
+                                height={100}
                                 className="w-12 h-12 rounded-full border-2 border-accent/50 object-cover shadow-lg"
                               />
                             ) : (
@@ -287,7 +292,7 @@ export function Navbar() {
                               <p className="text-sm text-white font-medium">
                                 {getUserDisplayName()}
                               </p>
-                              <p className="text-xs text-white/60">
+                              <p className="text-xs text-white/60 break-all max-w-[180px] truncate">
                                 {user?.email || ""}
                               </p>
                               <div className="flex items-center mt-1">
@@ -353,9 +358,11 @@ export function Navbar() {
               {isAuthenticated && (
                 <div className="relative">
                   {getUserPhoto() ? (
-                    <img
+                    <Image
                       src={getUserPhoto()}
                       alt="Profile"
+                      width={100}
+                      height={100}
                       className="w-9 h-9 rounded-full border-2 border-accent/50 object-cover shadow-md"
                       onError={(e) => {
                         e.target.style.display = "none";
@@ -435,7 +442,7 @@ export function Navbar() {
               <div className="p-6 border-b border-white/10">
                 <div className="flex items-center space-x-4 mb-4">
                   {getUserPhoto() ? (
-                    <img
+                    <Image
                       src={getUserPhoto()}
                       alt="Profile"
                       className="w-14 h-14 rounded-full border-2 border-accent/50 object-cover shadow-lg"

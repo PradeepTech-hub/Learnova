@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Bell,
   Pin,
@@ -15,11 +15,9 @@ import {
   GraduationCap,
   Users,
   Settings,
-  Star,
   Clock,
   ChevronDown,
   X,
-  Sparkles,
   TrendingUp,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -35,6 +33,8 @@ const SmartNoticeBoard = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [readNotices, setReadNotices] = useState(new Set());
   const [loading, setLoading] = useState(true);
+  const [scheduleView, setScheduleView] = useState("school");
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   // Helper functions to get user info safely (similar to navbar)
   const getUserDisplayName = () => {
@@ -298,7 +298,7 @@ const SmartNoticeBoard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black relative overflow-hidden pt-20">
       {/* Background Effects */}
-      <Navbar/>
+      <Navbar />
       <div className="fixed inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-blue-500/5" />
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(139,92,246,0.1)_0%,transparent_50%)]" />
 
@@ -341,6 +341,13 @@ const SmartNoticeBoard = () => {
                 <User className="w-4 h-4" />
                 <span className="text-sm capitalize">{getUserRole()}</span>
               </div>
+              <button
+                onClick={() => setShowScheduleModal(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl text-white hover:shadow-lg transition-all duration-300"
+              >
+                <Calendar className="w-4 h-4" />
+                <span>Check Schedule</span>
+              </button>
             </div>
           </div>
 
@@ -588,6 +595,115 @@ const SmartNoticeBoard = () => {
           </>
         )}
       </div>
+
+      {showScheduleModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-900/95 backdrop-blur-xl border border-gray-600 rounded-2xl p-6 max-w-2xl w-full">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-white">Check Schedule</h3>
+              <button
+                onClick={() => setShowScheduleModal(false)}
+                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            {/* School/College Toggle */}
+            <div className="flex space-x-2 mb-6">
+              <button
+                onClick={() => setScheduleView("school")}
+                className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all duration-300 ${
+                  scheduleView === "school"
+                    ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
+                    : "bg-gray-700/50 text-gray-300 hover:bg-gray-600/50"
+                }`}
+              >
+                School Schedule
+              </button>
+              <button
+                onClick={() => setScheduleView("college")}
+                className={`flex-1 py-3 px-4 rounded-xl font-medium transition-all duration-300 ${
+                  scheduleView === "college"
+                    ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
+                    : "bg-gray-700/50 text-gray-300 hover:bg-gray-600/50"
+                }`}
+              >
+                College Schedule
+              </button>
+            </div>
+
+            {/* Schedule Content */}
+            <div className="space-y-4">
+              {scheduleView === "school" ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-black/40 border border-gray-600 rounded-xl p-4">
+                    <h4 className="text-white font-semibold mb-2">
+                      Today's Classes
+                    </h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between text-gray-300">
+                        <span>Mathematics</span>
+                        <span>9:00 AM - 10:00 AM</span>
+                      </div>
+                      <div className="flex justify-between text-gray-300">
+                        <span>Science</span>
+                        <span>10:15 AM - 11:15 AM</span>
+                      </div>
+                      <div className="flex justify-between text-gray-300">
+                        <span>English</span>
+                        <span>11:30 AM - 12:30 PM</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-black/40 border border-gray-600 rounded-xl p-4">
+                    <h4 className="text-white font-semibold mb-2">
+                      Upcoming Events
+                    </h4>
+                    <div className="space-y-2 text-sm text-gray-300">
+                      <div>• Parent-Teacher Meeting - Oct 15</div>
+                      <div>• Science Fair - Oct 20</div>
+                      <div>• Sports Day - Oct 25</div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-black/40 border border-gray-600 rounded-xl p-4">
+                    <h4 className="text-white font-semibold mb-2">
+                      Today's Lectures
+                    </h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between text-gray-300">
+                        <span>Advanced Calculus</span>
+                        <span>9:00 AM - 10:30 AM</span>
+                      </div>
+                      <div className="flex justify-between text-gray-300">
+                        <span>Data Structures</span>
+                        <span>11:00 AM - 12:30 PM</span>
+                      </div>
+                      <div className="flex justify-between text-gray-300">
+                        <span>Physics Lab</span>
+                        <span>2:00 PM - 4:00 PM</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-black/40 border border-gray-600 rounded-xl p-4">
+                    <h4 className="text-white font-semibold mb-2">
+                      Assignments Due
+                    </h4>
+                    <div className="space-y-2 text-sm text-gray-300">
+                      <div>• Algorithm Analysis - Oct 12</div>
+                      <div>• Research Paper - Oct 18</div>
+                      <div>• Lab Report - Oct 22</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

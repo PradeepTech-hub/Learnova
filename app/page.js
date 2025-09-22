@@ -1,6 +1,6 @@
 "use client";
 import { Navbar } from "@/components/Navbar";
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState, useCallback } from "react";
 import SplitText from "@/components/ui-block/SplitText";
 import DarkVeil from "@/components/ui-block/DarkVeil";
 import {
@@ -18,132 +18,263 @@ import {
   Building2,
   GraduationCap,
   Sparkles,
-  ChevronDown,
   ArrowRight,
   BookOpen,
   Users,
   TrendingUp,
   Award,
 } from "lucide-react";
-import { useState } from "react";
 import Link from "next/link";
 import { analytics } from "@/lib/firebaseConfig";
 import { logEvent } from "firebase/analytics";
+
+// Constants moved outside component for better performance
+const PARTICLES_DATA = [
+  { id: 1, left: 20, top: 30, delay: 0, duration: 10 },
+  { id: 2, left: 60, top: 80, delay: 2, duration: 12 },
+  { id: 3, left: 80, top: 20, delay: 4, duration: 14 },
+  { id: 4, left: 30, top: 70, delay: 6, duration: 11 },
+  { id: 5, left: 90, top: 50, delay: 8, duration: 13 },
+];
+
+const STATS_DATA = [
+  { number: "Upcoming", label: "Institution Partnerships", icon: BookOpen },
+  { number: "Upcoming", label: "Student Tracking", icon: Users },
+  { number: "70%", label: "Time Saved", icon: TrendingUp },
+  { number: "98%", label: "Accuracy Rate", icon: Award },
+];
+
+const VALUES_DATA = [
+  {
+    icon: Target,
+    title: "Efficiency",
+    description:
+      "We streamline workflows and reduce redundancy, giving educators more time to focus on teaching.",
+    gradient: "from-blue-500 to-cyan-500",
+  },
+  {
+    icon: Heart,
+    title: "Engagement",
+    description:
+      "Interactive and gamified experiences that motivate students and make learning enjoyable.",
+    gradient: "from-pink-500 to-rose-500",
+  },
+  {
+    icon: Lightbulb,
+    title: "Accessibility",
+    description:
+      "Designed for all schools, even in low-network areas, with affordable and easy-to-use solutions.",
+    gradient: "from-purple-500 to-violet-500",
+  },
+];
+
+const TEAM_MEMBERS = [
+  {
+    name: "Prem Shaw",
+    role: "Team Leader & Full-Stack Developer",
+    initials: "PS",
+    description:
+      "Guides the team, manages development & deployment, and builds the Learnova platform end-to-end to ensure a seamless and impactful experience.",
+    color: "from-purple-500 to-pink-500",
+  },
+  {
+    name: "Prashant Bhati",
+    role: "Web Developer",
+    initials: "PB",
+    description:
+      "Maintains Learnova's web applications with a strong focus on performance and usability.",
+    color: "from-blue-500 to-cyan-500",
+  },
+  {
+    name: "Polawar Pranav Shirish",
+    role: "Frontend Developer",
+    initials: "PP",
+    description:
+      "Designs intuitive and interactive user interfaces to deliver an engaging and accessible student experience.",
+    color: "from-emerald-500 to-teal-500",
+  },
+  {
+    name: "Abir Ghosh",
+    role: "Machine Learning Specialist",
+    initials: "AG",
+    description:
+      "Develops ML models and data-driven insights to personalize learning and optimize institutional performance.",
+    color: "from-rose-500 to-pink-500",
+  },
+  {
+    name: "Anuj Ram Shrivastava",
+    role: "ML & Backend Developer",
+    initials: "AR",
+    description:
+      "Works on backend systems and ML algorithms that power smart recommendations and advanced analytics in Learnova.",
+    color: "from-indigo-500 to-violet-500",
+  },
+  {
+    name: "Chandana S",
+    role: "Testing & Documentation",
+    initials: "CS",
+    description:
+      "Ensures reliability through rigorous testing and comprehensive documentation for the platform.",
+    color: "from-amber-500 to-orange-500",
+  },
+];
+
+const IMPACT_DATA = [
+  {
+    icon: User,
+    title: "Teachers",
+    description:
+      "Regain ~1 hour/day, enabling more focus on teaching and mentoring.",
+  },
+  {
+    icon: GraduationCap,
+    title: "Students",
+    description:
+      "Convert ~90+ hours/year from idle time into productive learning.",
+  },
+  {
+    icon: Building2,
+    title: "Institutions",
+    description:
+      "Improve attendance and engagement metrics, enhancing overall efficiency.",
+  },
+  {
+    icon: Users,
+    title: "Parents",
+    description:
+      "Gain transparent insights into their child's attendance and activities, fostering trust.",
+  },
+];
+
+// Reusable components
+const SectionBadge = ({
+  icon: Icon,
+  text,
+  gradient = "from-purple-500/20 to-pink-500/20",
+  borderColor = "purple-500/30",
+  textColor = "purple-300",
+}) => (
+  <div
+    className={`inline-flex items-center px-4 py-2 bg-gradient-to-r ${gradient} rounded-full border border-${borderColor} backdrop-blur-sm mb-6`}
+  >
+    <Icon className={`w-5 h-5 text-${textColor.split("-")[0]}-400 mr-2`} />
+    <span className={`text-${textColor} font-medium`}>{text}</span>
+  </div>
+);
+
+const ActionButton = ({
+  href,
+  variant = "primary",
+  children,
+  className = "",
+}) => {
+  const baseClasses =
+    "group inline-flex items-center px-8 py-4 rounded-full font-semibold transition-all duration-500 hover:scale-[1.02]";
+  const variants = {
+    primary:
+      "bg-gradient-to-r from-accent to-purple-500 text-white hover:shadow-xl hover:shadow-accent/25",
+    secondary:
+      "bg-white/10 text-white border border-white/20 hover:bg-white/20",
+  };
+
+  const content = (
+    <button className={`${baseClasses} ${variants[variant]} ${className}`}>
+      {children}
+    </button>
+  );
+
+  return href ? <Link href={href}>{content}</Link> : content;
+};
 
 export default function AboutPage() {
   const [scrollY, setScrollY] = useState(0);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
+  // Memoized mouse tracking with throttling
+  const handleMouseMove = useCallback((e) => {
+    setMousePosition({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  const handleScroll = useCallback(() => {
+    setScrollY(window.scrollY);
+  }, []);
+
+  const handleAnimationComplete = useCallback(() => {
+    console.log("Animation completed");
+  }, []);
+
   useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    const handleMouseMove = (e) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
+    // Throttled event listeners
+    let scrollTimeout;
+    let mouseTimeout;
+
+    const throttledScroll = () => {
+      if (!scrollTimeout) {
+        scrollTimeout = setTimeout(() => {
+          handleScroll();
+          scrollTimeout = null;
+        }, 16); // ~60fps
+      }
     };
 
-    window.addEventListener("scroll", handleScroll);
-    window.addEventListener("mousemove", handleMouseMove);
+    const throttledMouseMove = (e) => {
+      if (!mouseTimeout) {
+        mouseTimeout = setTimeout(() => {
+          handleMouseMove(e);
+          mouseTimeout = null;
+        }, 32); // ~30fps
+      }
+    };
+
+    window.addEventListener("scroll", throttledScroll, { passive: true });
+    window.addEventListener("mousemove", throttledMouseMove, { passive: true });
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("scroll", throttledScroll);
+      window.removeEventListener("mousemove", throttledMouseMove);
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+      if (mouseTimeout) clearTimeout(mouseTimeout);
     };
-  }, []);
+  }, [handleScroll, handleMouseMove]);
 
   useEffect(() => {
     if (analytics) {
-      logEvent(analytics, "page_view", { page: "home" });
+      logEvent(analytics, "page_view", { page: "about" });
     }
   }, []);
 
-  const handleAnimationComplete = () => {
-    console.log("animation completed ");
-  };
+  // Memoized style calculations
+  const mouseOrbStyle = useMemo(
+    () => ({
+      left: mousePosition.x - 192,
+      top: mousePosition.y - 192,
+      transition: "all 1.2s ease-out",
+    }),
+    [mousePosition.x, mousePosition.y]
+  );
 
-  const particles = [
-    { id: 1, left: 20, top: 30, delay: 0, duration: 10 },
-    { id: 2, left: 60, top: 80, delay: 2, duration: 12 },
-    { id: 3, left: 80, top: 20, delay: 4, duration: 14 },
-    { id: 4, left: 30, top: 70, delay: 6, duration: 11 },
-    { id: 5, left: 90, top: 50, delay: 8, duration: 13 },
-  ];
-
-  const statsData = [
-    { number: "Upcoming", label: "Institution Partnerships", icon: BookOpen },
-    { number: "Upcoming", label: "Student Tracking", icon: Users },
-    { number: "70%", label: "Time Saved", icon: TrendingUp },
-    { number: "98%", label: "Accuracy Rate", icon: Award },
-  ];
-
-  const teamMembers = [
-    {
-      name: "Prem Shaw",
-      role: "Team Leader & Full-Stack Developer",
-      initials: "PS",
-      description:
-        "Guides the team, manages development & deployment, and builds the Learnova platform end-to-end to ensure a seamless and impactful experience.",
-      color: "from-purple-500 to-pink-500",
-    },
-    {
-      name: "Prashant Bhati",
-      role: "Web Developer",
-      initials: "PB",
-      description:
-        "Maintains Learnova’s web applications with a strong focus on performance and usability.",
-      color: "from-blue-500 to-cyan-500",
-    },
-    {
-      name: "Polawar Pranav Shirish",
-      role: "Frontend Developer",
-      initials: "PP",
-      description:
-        "Designs intuitive and interactive user interfaces to deliver an engaging and accessible student experience.",
-      color: "from-emerald-500 to-teal-500",
-    },
-    {
-      name: "Abir Ghosh",
-      role: "Machine Learning Specialist",
-      initials: "AG",
-      description:
-        "Develops ML models and data-driven insights to personalize learning and optimize institutional performance.",
-      color: "from-rose-500 to-pink-500",
-    },
-    {
-      name: "Anuj Ram Shrivastava",
-      role: "ML & Backend Developer",
-      initials: "AR",
-      description:
-        "Works on backend systems and ML algorithms that power smart recommendations and advanced analytics in Learnova.",
-      color: "from-indigo-500 to-violet-500",
-    },
-    {
-      name: "Chandana S",
-      role: "Testing & Documentation",
-      initials: "CS",
-      description:
-        "Ensures reliability through rigorous testing and comprehensive documentation for the platform.",
-      color: "from-amber-500 to-orange-500",
-    },
-  ];
+  const gridTransform = useMemo(
+    () => ({
+      transform: `translateY(${scrollY * 0.2}px)`,
+    }),
+    [scrollY]
+  );
 
   return (
     <>
-      {/* Background with stable elements */}
+      {/* Background Effects */}
       <div className="fixed inset-0 -z-10">
         <DarkVeil />
 
-        {/* Slower, more subtle gradient orbs */}
+        {/* Mouse-following gradient orb */}
         <div
           className="absolute w-96 h-96 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-full blur-3xl"
-          style={{
-            left: mousePosition.x - 192,
-            top: mousePosition.y - 192,
-            transition: "all 1.2s ease-out",
-          }}
+          style={mouseOrbStyle}
         />
 
-        {/* Reduced and slower floating particles */}
+        {/* Floating particles */}
         <div className="absolute inset-0 overflow-hidden">
-          {particles.map((particle) => (
+          {PARTICLES_DATA.map((particle) => (
             <div
               key={particle.id}
               className="absolute w-1 h-1 bg-accent/20 rounded-full animate-float"
@@ -163,24 +294,17 @@ export default function AboutPage() {
 
         {/* Hero Section */}
         <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-          {/* Slower background grid */}
           <div
             className="absolute inset-0 opacity-10"
             style={{
               backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0)`,
               backgroundSize: "50px 50px",
-              transform: `translateY(${scrollY * 0.2}px)`,
+              ...gridTransform,
             }}
           />
 
           <div className="max-w-4xl mx-auto text-center relative">
-            {/* Product Badge */}
-            <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full border border-purple-500/30 backdrop-blur-sm mb-8">
-              <Sparkles className="w-4 h-4 text-purple-400 mr-2" />
-              <span className="text-purple-300 text-sm font-medium">
-                Introducing Learnova
-              </span>
-            </div>
+            <SectionBadge icon={Sparkles} text="Introducing Learnova" />
 
             <div className="flex flex-wrap justify-center items-center mb-8 text-center gap-x-6 gap-y-4">
               <SplitText
@@ -213,19 +337,17 @@ export default function AboutPage() {
               />
             </div>
 
-            <div className="relative">
-              <p className="text-xl md:text-2xl text-gray-300 leading-relaxed max-w-3xl mx-auto">
-                The most advanced platform for{" "}
-                <span className="text-accent font-semibold">
-                  curriculum planning
-                </span>{" "}
-                and{" "}
-                <span className="text-purple-400 font-semibold">
-                  attendance management
-                </span>
-                , designed for smooth academic management.
-              </p>
-            </div>
+            <p className="text-xl md:text-2xl text-gray-300 leading-relaxed max-w-3xl mx-auto">
+              The most advanced platform for{" "}
+              <span className="text-accent font-semibold">
+                curriculum planning
+              </span>{" "}
+              and{" "}
+              <span className="text-purple-400 font-semibold">
+                attendance management
+              </span>
+              , designed for smooth academic management.
+            </p>
           </div>
         </section>
 
@@ -234,12 +356,7 @@ export default function AboutPage() {
           <div className="max-w-7xl mx-auto">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <div className="space-y-8">
-                <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full border border-purple-500/30 backdrop-blur-sm">
-                  <Sparkles className="w-5 h-5 text-purple-400 mr-2" />
-                  <span className="text-purple-300 font-medium">
-                    Our Mission
-                  </span>
-                </div>
+                <SectionBadge icon={Sparkles} text="Our Mission" />
 
                 <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-accent bg-clip-text text-transparent">
                   Empowering Educational Excellence
@@ -268,18 +385,16 @@ export default function AboutPage() {
                   </p>
                 </div>
 
-                <button className="group inline-flex items-center px-6 py-3 bg-gradient-to-r from-accent to-purple-500 rounded-full text-white font-semibold hover:shadow-xl hover:shadow-accent/25 transition-all duration-500 hover:scale-[1.02]">
+                <ActionButton>
                   Learn More
                   <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
-                </button>
+                </ActionButton>
               </div>
 
               <div className="relative">
                 <div className="bg-gradient-to-br from-purple-500/10 via-accent/10 to-pink-500/10 rounded-3xl h-96 flex items-center justify-center border border-purple-500/20 backdrop-blur-sm relative overflow-hidden group hover:scale-[1.02] transition-all duration-700">
-                  {/* Stable animated background */}
                   <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
 
-                  {/* Fixed floating elements */}
                   <div className="absolute top-4 right-4 w-3 h-3 bg-accent/60 rounded-full animate-pulse" />
                   <div
                     className="absolute bottom-6 left-6 w-2 h-2 bg-purple-400/60 rounded-full animate-pulse"
@@ -306,15 +421,17 @@ export default function AboutPage() {
 
         {/* Values Section */}
         <section className="py-20 px-4 sm:px-6 lg:px-8 relative">
-          {/* Stable section background */}
           <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-purple-900/5 to-black/40 backdrop-blur-3xl" />
 
           <div className="max-w-7xl mx-auto relative">
             <div className="text-center mb-20">
-              <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-accent/20 to-purple-500/20 rounded-full border border-accent/30 backdrop-blur-sm mb-6">
-                <Heart className="w-5 h-5 text-accent mr-2" />
-                <span className="text-accent font-medium">Our Values</span>
-              </div>
+              <SectionBadge
+                icon={Heart}
+                text="Our Values"
+                gradient="from-accent/20 to-purple-500/20"
+                borderColor="accent/30"
+                textColor="accent"
+              />
 
               <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
                 Core Principles That Drive Us
@@ -326,29 +443,7 @@ export default function AboutPage() {
             </div>
 
             <div className="grid md:grid-cols-3 gap-8">
-              {[
-                {
-                  icon: Target,
-                  title: "Efficiency",
-                  description:
-                    "We streamline workflows and reduce redundancy, giving educators more time to focus on teaching.",
-                  gradient: "from-blue-500 to-cyan-500",
-                },
-                {
-                  icon: Heart,
-                  title: "Engagement",
-                  description:
-                    "Interactive and gamified experiences that motivate students and make learning enjoyable.",
-                  gradient: "from-pink-500 to-rose-500",
-                },
-                {
-                  icon: Lightbulb,
-                  title: "Accessibility",
-                  description:
-                    "Designed for all schools, even in low-network areas, with affordable and easy-to-use solutions.",
-                  gradient: "from-purple-500 to-violet-500",
-                },
-              ].map((value, index) => (
+              {VALUES_DATA.map((value, index) => (
                 <Card
                   key={index}
                   className="group bg-black/40 border-white/10 backdrop-blur-xl hover:border-accent/50 transition-all duration-700 hover:scale-[1.02] hover:shadow-2xl hover:shadow-accent/25"
@@ -379,10 +474,13 @@ export default function AboutPage() {
         <section className="py-20 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-20">
-              <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-full border border-emerald-500/30 backdrop-blur-sm mb-6">
-                <Users className="w-5 h-5 text-emerald-400 mr-2" />
-                <span className="text-emerald-400 font-medium">Our Team</span>
-              </div>
+              <SectionBadge
+                icon={Users}
+                text="Our Team"
+                gradient="from-emerald-500/20 to-teal-500/20"
+                borderColor="emerald-500/30"
+                textColor="emerald-400"
+              />
 
               <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
                 Meet the Visionaries
@@ -394,7 +492,7 @@ export default function AboutPage() {
             </div>
 
             <div className="grid md:grid-cols-3 gap-8">
-              {teamMembers.map((member, index) => (
+              {TEAM_MEMBERS.map((member, index) => (
                 <Card
                   key={index}
                   className="group bg-black/40 border-white/10 backdrop-blur-xl hover:border-accent/50 transition-all duration-700 hover:scale-[1.02]"
@@ -410,7 +508,6 @@ export default function AboutPage() {
                         <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                       </div>
 
-                      {/* Stable floating badge */}
                       <div className="absolute -top-2 -right-2 w-8 h-8 bg-accent/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 transform scale-75 group-hover:scale-100">
                         <Sparkles className="w-4 h-4 text-white" />
                       </div>
@@ -432,9 +529,8 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* Enhanced Stats Section */}
+        {/* Stats Section */}
         <section className="py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-          {/* Stable animated background */}
           <div className="absolute inset-0 bg-gradient-to-r from-accent/10 via-purple-500/10 to-pink-500/10 backdrop-blur-3xl">
             <div
               className="absolute inset-0 opacity-30"
@@ -446,10 +542,13 @@ export default function AboutPage() {
 
           <div className="max-w-7xl mx-auto relative">
             <div className="text-center mb-20">
-              <div className="inline-flex items-center px-4 py-2 bg-white/10 rounded-full border border-white/20 backdrop-blur-sm mb-6">
-                <TrendingUp className="w-5 h-5 text-white mr-2" />
-                <span className="text-white font-medium">Our Impact</span>
-              </div>
+              <SectionBadge
+                icon={TrendingUp}
+                text="Our Impact"
+                gradient="from-white/10 to-white/10"
+                borderColor="white/20"
+                textColor="white"
+              />
 
               <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
                 Transforming Education Globally
@@ -461,20 +560,13 @@ export default function AboutPage() {
             </div>
 
             <div className="grid md:grid-cols-4 gap-8">
-              {statsData.map((stat, index) => (
+              {STATS_DATA.map((stat, index) => (
                 <div key={index} className="group text-center">
                   <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/20 hover:border-accent/40 transition-all duration-700 hover:scale-[1.02] hover:shadow-2xl">
-                    {/* Icon */}
-                    <div className="mb-6">
-                      <stat.icon className="w-12 h-12 text-accent mx-auto group-hover:scale-110 transition-transform duration-500" />
-                    </div>
-
-                    {/* Number / Word */}
+                    <stat.icon className="w-12 h-12 text-accent mx-auto mb-6 group-hover:scale-110 transition-transform duration-500" />
                     <div className="text-4xl md:text-5xl font-bold text-white mb-3 group-hover:text-accent transition-colors duration-500">
                       {stat.number}
                     </div>
-
-                    {/* Label */}
                     <p className="text-white/80 font-medium text-lg group-hover:text-white transition-colors duration-500">
                       {stat.label}
                     </p>
@@ -489,10 +581,7 @@ export default function AboutPage() {
         <section className="py-20 px-4 sm:px-6 lg:px-8 relative">
           <div className="max-w-7xl mx-auto relative">
             <div className="text-center mb-16">
-              <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-accent/20 to-purple-500/20 rounded-full border border-accent/30 backdrop-blur-sm mb-6">
-                <Sparkles className="w-5 h-5 text-accent mr-2" />
-                <span className="text-accent font-medium">Our Impact</span>
-              </div>
+              <SectionBadge icon={Sparkles} text="Our Impact" />
               <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
                 Transforming Education for Everyone
               </h2>
@@ -503,32 +592,7 @@ export default function AboutPage() {
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {[
-                {
-                  icon: User,
-                  title: "Teachers",
-                  description:
-                    "Regain ~1 hour/day, enabling more focus on teaching and mentoring.",
-                },
-                {
-                  icon: GraduationCap,
-                  title: "Students",
-                  description:
-                    "Convert ~90+ hours/year from idle time into productive learning.",
-                },
-                {
-                  icon: Building2,
-                  title: "Institutions",
-                  description:
-                    "Improve attendance and engagement metrics, enhancing overall efficiency.",
-                },
-                {
-                  icon: Users,
-                  title: "Parents",
-                  description:
-                    "Gain transparent insights into their child’s attendance and activities, fostering trust.",
-                },
-              ].map((impact, index) => (
+              {IMPACT_DATA.map((impact, index) => (
                 <div
                   key={index}
                   className="group bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/20 hover:border-accent/40 transition-all duration-700 hover:scale-[1.02] hover:shadow-2xl hover:shadow-accent/25 text-center"
@@ -560,17 +624,13 @@ export default function AboutPage() {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link href={"/auth"}>
-                <button className="group inline-flex items-center px-8 py-4 bg-gradient-to-r from-accent to-purple-500 rounded-full text-white font-semibold hover:shadow-xl hover:shadow-accent/25 transition-all duration-500 hover:scale-[1.02]">
+                <ActionButton href="/auth">
                   Get Started Today
                   <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
-                </button>
-                </Link>
-                <Link href={"/contact"}>
-                <button className="inline-flex items-center px-8 py-4 bg-white/10 rounded-full text-white font-semibold border border-white/20 hover:bg-white/20 transition-all duration-500 hover:scale-[1.02]">
+                </ActionButton>
+                <ActionButton href="/contact" variant="secondary">
                   Schedule Demo
-                </button>
-                </Link>
+                </ActionButton>
               </div>
             </div>
           </div>
@@ -589,7 +649,6 @@ export default function AboutPage() {
             opacity: 0.8;
           }
         }
-
         .animate-float {
           animation: float ease-in-out infinite;
         }

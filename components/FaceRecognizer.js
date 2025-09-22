@@ -67,7 +67,9 @@ export default function FaceRecognizer() {
         startVideo();
       } catch (err) {
         console.error("Model load error:", err);
-        setMessage("Failed to load models. Please check your network connection.");
+        setMessage(
+          "Failed to load models. Please check your network connection."
+        );
         setIsLoading(false);
         setFinished(true);
       }

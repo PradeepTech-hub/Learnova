@@ -1,11 +1,12 @@
 // app/student/dashboard/page.jsx
 "use client";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import StudentDashboard from "@/components/StudentDashboard";
 
-export default function StudentDashboard() {
+export default function Student() {
   return (
     <ProtectedRoute allowedRoles={["student"]}>
-      <div>Student Dashboard Content</div>
+        <StudentDashboard/>
     </ProtectedRoute>
   );
 }
