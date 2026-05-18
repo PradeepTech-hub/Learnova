@@ -1,18 +1,65 @@
 import { put } from "@vercel/blob";
+import { randomUUID } from "crypto";
 import { connectDb } from "@/lib/mongodb";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const normalizeText = (value) =>
+  typeof value === "string" ? value.trim() : "";
+
+const getImageExtension = (mimeType) => {
+  switch (mimeType) {
+    case "image/png":
+      return "png";
+    case "image/webp":
+      return "webp";
+    case "image/jpeg":
+    default:
+      return "jpg";
+  }
+};
 
 export async function POST(req) {
   try {
     const formData = await req.formData();
-    const name = formData.get("name");
-    const rollNo = formData.get("rollNo");
-    const email = formData.get("email");
+    const name = normalizeText(formData.get("name"));
+    const rollNo = normalizeText(formData.get("rollNo"));
+    const email = normalizeText(formData.get("email")).toLowerCase();
     const file = formData.get("photo");
 
     if (!name || !rollNo || !email || !file) {
-return jsonError("Name, rollNo, email, and photo are required", 400);
+      return jsonError("Name, rollNo, email, and photo are required", 400);
+    }
+
+    if (!EMAIL_PATTERN.test(email)) {
+      return jsonError("Invalid email address", 400);
+    }
+
+    if (name.length > 100) {
+      return jsonError("Name is too long", 400);
+    }
+
+    if (rollNo.length > 30) {
+      return jsonError("Roll number is too long", 400);
+    }
+
+    if (typeof file?.arrayBuffer !== "function") {
+      return jsonError("Invalid photo upload", 400);
+    }
+
+    if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+      return jsonError("Photo must be a JPEG, PNG, or WebP image", 400);
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      return jsonError("Photo exceeds 5MB limit", 400);
     }
 
     // Get DB
@@ -20,9 +67,11 @@ return jsonError("Name, rollNo, email, and photo are required", 400);
     const users = db.collection("users");
 
     // Check if user already registered
-    const existingUser = await users.findOne({ rollNo });
+    const existingUser = await users.findOne({
+      $or: [{ rollNo }, { email }],
+    });
     if (existingUser) {
-return jsonError("User already registered with a photo", 409);
+      return jsonError("User already registered with a photo", 409);
     }
 
     // Convert file to buffer
@@ -30,8 +79,9 @@ return jsonError("User already registered with a photo", 409);
     const buffer = Buffer.from(arrayBuffer);
 
     // Generate unique filename
-    const safeName = name.replace(/[^a-zA-Z0-9_-]/g, "_");
-    const fileName = `labels/${safeName}/1.jpg`;
+    const safeName = name.replace(/[^a-zA-Z0-9_-]/g, "_") || "user";
+    const fileExtension = getImageExtension(file.type);
+    const fileName = `labels/${safeName}/${randomUUID()}.${fileExtension}`;
 
     // Upload to Vercel Blob
     const blob = await put(fileName, buffer, {
@@ -44,19 +94,19 @@ return jsonError("User already registered with a photo", 409);
       name,
       rollNo,
       email,
-      image: blob.url, // only one photo allowed
+      image: blob.url,
     };
     await users.insertOne(user);
 
-return jsonSuccess(
-  {
-    message: "User registered successfully",
-    user,
-  },
-  201,
-);
+    return jsonSuccess(
+      {
+        message: "User registered successfully",
+        user,
+      },
+      201,
+    );
   } catch (error) {
     console.error(error);
-return jsonError(error.message || "Internal server error", 500);
+    return jsonError(error.message || "Internal server error", 500);
   }
 }
