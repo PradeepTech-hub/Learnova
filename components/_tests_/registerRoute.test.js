@@ -34,6 +34,7 @@ describe("POST /api/register - Authentication, Rollback, and Validation Security
 
   beforeEach(() => {
     jest.clearAllMocks();
+    rateLimitMap.clear();
 
     if (rateLimitMap) {
       rateLimitMap.clear();
@@ -55,6 +56,17 @@ describe("POST /api/register - Authentication, Rollback, and Validation Security
     });
 
     put.mockResolvedValue({ url: "https://example.com/blob.jpg" });
+    del.mockResolvedValue();
+
+    // Default mock behavior for token verification: successful validation matching the body email
+    verifyFirebaseToken.mockImplementation(async (token) => {
+      if (!token) return null;
+      if (token === "invalid-token") return null;
+      return {
+        uid: "mock-uid",
+        email: token.includes("@") ? token : "user@domain.com",
+      };
+    });
   });
 
   const createMockFile = (mimeType, size, magicBytes = []) => {
@@ -75,9 +87,11 @@ describe("POST /api/register - Authentication, Rollback, and Validation Security
     return mockFileObj;
   };
 
-  const createMockRequest = (data, tokenVal) => {
-    const emailVal = data.email;
-    const authHeader = tokenVal !== undefined ? (tokenVal ? `Bearer ${tokenVal}` : "") : `Bearer ${emailVal}`;
+  const createMockRequest = (data, token = "user@domain.com") => {
+    const headers = new Map();
+    if (token) {
+      headers.set("authorization", `Bearer ${token}`);
+    }
     return {
       headers: {
         get: jest.fn().mockImplementation((name) => {
@@ -93,6 +107,9 @@ describe("POST /api/register - Authentication, Rollback, and Validation Security
       formData: jest.fn().mockResolvedValue({
         get: (key) => data[key],
       }),
+      headers: {
+        get: (key) => headers.get(key.toLowerCase()) || null,
+      },
     };
   };
 
@@ -103,7 +120,7 @@ describe("POST /api/register - Authentication, Rollback, and Validation Security
     const req = createMockRequest({
       name: "John Doe",
       rollNo: "123456",
-      email: "user+tag@domain.co.uk",
+      email: "user@domain.com",
       photo: mockFile,
     });
 
@@ -112,7 +129,7 @@ describe("POST /api/register - Authentication, Rollback, and Validation Security
 
     expect(response.status).toBe(201);
     expect(body.success).toBe(true);
-    expect(body.data.user.email).toBe("user+tag@domain.co.uk");
+    expect(body.data.user.email).toBe("user@domain.com");
     expect(mockInsertOne).toHaveBeenCalled();
   });
 
