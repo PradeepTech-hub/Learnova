@@ -49,7 +49,6 @@ const LearnovaChatbot = () => {
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [currentCategory, setCurrentCategory] = useState("general");
-  const [hasApiKey, setHasApiKey] = useState(false);
 
   const messagesEndRef = useRef(null);
 
@@ -734,17 +733,6 @@ const LearnovaChatbot = () => {
             </div>
             <div className="flex justify-between items-center mt-3">
               <div className="flex items-center space-x-2">
-                {hasApiKey && (
-                  <div className="flex items-center space-x-1 text-xs">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span
-                      className={`${isDarkMode ? "text-green-400" : "text-green-600"
-                        }`}
-                    >
-                      AI Enhanced
-                    </span>
-                  </div>
-                )}
                 <p
                   className={`text-xs ${isDarkMode ? "text-gray-500" : "text-gray-400"
                     }`}
