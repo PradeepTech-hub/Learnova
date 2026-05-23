@@ -8,13 +8,13 @@ import { Toaster } from "react-hot-toast";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import ErrorBoundary from "@/components/ErrorBoundary"; // Imported ErrorBoundary
 import LearnovaChatbot from "@/components/ChatBot";
 import ClientLayout from "@/components/ClientLayout";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
 import ScrollToTop from "@/components/ScrollToTop";
 import BackToTop from "@/components/BackToTop";
-import ErrorBoundary from "@/components/ErrorBoundary";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -235,6 +235,11 @@ export default function RootLayout({ children }) {
       <body
         className={`font-sans ${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground min-h-screen transition-colors duration-300`}
       >
+      <ThemeProvider
+  attribute="class"
+  defaultTheme="system"
+  enableSystem
+>
         <AuthProvider>
           <NotificationProvider>
           <Suspense fallback={null}>
@@ -260,6 +265,7 @@ export default function RootLayout({ children }) {
           </Suspense>
           </NotificationProvider>
         </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
