@@ -1,5 +1,4 @@
 "use client";
-
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -47,9 +46,40 @@ export function Navbar() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [prefersDark, setPrefersDark] = useState(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const saved = localStorage.getItem("theme");
+      if (saved === "light") return false;
+      if (saved === "dark") return true;
+      return (
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches
+      );
+    } catch (e) {
+      return null;
+    }
+  });
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Detect system preference on mount so initial render matches user's OS
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const mq = window.matchMedia("(prefers-color-scheme: dark)");
+      const update = (e) => setPrefersDark(e.matches);
+      if (mq.addEventListener) mq.addEventListener("change", update);
+      else mq.addListener && mq.addListener(update);
+      return () => {
+        if (mq.removeEventListener) mq.removeEventListener("change", update);
+        else mq.removeListener && mq.removeListener(update);
+      };
+    } catch (e) {
+      // ignore
+    }
   }, []);
 
   const scrollProgressValue = Number.isFinite(scrollProgress) ? scrollProgress : 0;
