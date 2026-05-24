@@ -36,9 +36,38 @@ export const GET = withErrorHandler(async (request) => {
       throw new NotFoundError("Image not found");
     }
 
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(user.image);
+    } catch {
+      throw new ValidationError("Invalid image URL");
+    }
+
+    if (parsedUrl.protocol !== "https:") {
+      throw new ValidationError("Image URL must use HTTPS");
+    }
+
+    const allowedImageHosts = [
+      "public.blob.vercel-storage.com",
+      "lh3.googleusercontent.com",
+    ];
+
+    const hostOk = allowedImageHosts.some(
+      (h) => parsedUrl.hostname === h || parsedUrl.hostname.endsWith("." + h)
+    );
+
+    if (!hostOk) {
+      throw new ValidationError("Image source not allowed");
+    }
+
     const imageResponse = await fetch(user.image);
     if (!imageResponse.ok) {
       throw new AppError("Failed to fetch image", 502);
+    }
+
+    const contentType = imageResponse.headers.get("content-type") || "";
+    if (!contentType.startsWith("image/")) {
+      throw new AppError("Response is not an image", 502);
     }
 
     const imageBuffer = await imageResponse.arrayBuffer();
@@ -46,7 +75,7 @@ export const GET = withErrorHandler(async (request) => {
     return new NextResponse(imageBuffer, {
       status: 200,
       headers: {
-        "Content-Type": imageResponse.headers.get("content-type") || "image/jpeg",
+        "Content-Type": contentType,
         "Cache-Control": "no-store, no-cache, must-revalidate",
         "X-Content-Type-Options": "nosniff",
       },
