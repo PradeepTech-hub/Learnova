@@ -69,29 +69,28 @@ export function Navbar() {
     userProfile,
     signOut,
     isAuthenticated,
+    loading,
   } = useAuthContext();
 
   const dropdownRef = useRef(null);
   const langRef = useRef(null); // Ref to track language dropdown outside clicks
   const pathname = usePathname();
   const { theme, setTheme, resolvedTheme } = useTheme();
-  const [prefersDark, setPrefersDark] = useState(() => {
-    if (typeof window === "undefined") return null;
-    try {
-      const saved = localStorage.getItem("theme");
-      if (saved === "light") return false;
-      if (saved === "dark") return true;
-      return (
-        typeof window.matchMedia === "function" &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches
-      );
-    } catch (e) {
-      return null;
-    }
-  });
+  const [prefersDark, setPrefersDark] = useState(null);
 
   useEffect(() => {
     setMounted(true);
+    try {
+      const saved = localStorage.getItem("theme");
+      if (saved === "light") setPrefersDark(false);
+      else if (saved === "dark") setPrefersDark(true);
+      else {
+        setPrefersDark(
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches
+        );
+      }
+    } catch (e) {}
   }, []);
 
   useEffect(() => {
@@ -363,7 +362,9 @@ export function Navbar() {
                 </button>
               )}
 
-              {isAuthenticated ? (
+              {loading ? (
+                <div className="w-24 h-10 bg-zinc-200 dark:bg-zinc-800 animate-pulse rounded-xl" />
+              ) : isAuthenticated ? (
                 <div className="flex items-center space-x-3 pl-1 border-l border-zinc-200 dark:border-zinc-800">
                   
                   {/* Notifications Module Panel */}
@@ -550,7 +551,9 @@ export function Navbar() {
 
             {/* Primary Action Buttons */}
             <div className="pt-2 border-t border-zinc-100 dark:border-zinc-900">
-              {isAuthenticated ? (
+              {loading ? (
+                <div className="w-full h-10 bg-zinc-200 dark:bg-zinc-800 animate-pulse rounded-lg" />
+              ) : isAuthenticated ? (
                 <Button onClick={handleLogout} variant="destructive" size="default" className="w-full text-white rounded-lg text-sm h-10">
                   <LogOut className="h-4 w-4 mr-2" /> Logout
                 </Button>
