@@ -27,6 +27,8 @@ import {
 } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import firestorePool from "@/lib/firestorePool";
+import { db } from "@/lib/firebaseConfig";
+import { collection, query, where, orderBy, limit } from "firebase/firestore";
 
 // ─── Context ───────────────────────────────────────────────────────────────────
 
@@ -92,12 +94,8 @@ export function FirestoreProvider({ children }) {
   // ── Notices ──────────────────────────────────────────────────────────────────
   const noticesKey = `notices:role:${userRole}`;
   const noticesQuery = useCallback(() => {
-    if (!isReady) return null;
+    if (!isReady || !db) return null;
     try {
-      // Dynamic import so this module stays SSR-safe
-      const { db } = require("@/lib/firebaseConfig");
-      const { collection, query, where } = require("firebase/firestore");
-      if (!db) return null;
       return query(
         collection(db, "notices"),
         where("targetAudience", "array-contains", userRole)
@@ -116,11 +114,8 @@ export function FirestoreProvider({ children }) {
   // ── Attendance ────────────────────────────────────────────────────────────────
   const attendanceKey = `attendance:uid:${uid}`;
   const attendanceQuery = useCallback(() => {
-    if (!isReady) return null;
+    if (!isReady || !db) return null;
     try {
-      const { db } = require("@/lib/firebaseConfig");
-      const { collection, query, where, orderBy, limit } = require("firebase/firestore");
-      if (!db) return null;
       return query(
         collection(db, "attendance"),
         where("studentId", "==", uid),
@@ -141,11 +136,8 @@ export function FirestoreProvider({ children }) {
   // ── User Notifications ────────────────────────────────────────────────────────
   const userNotifKey = `userNotifications:uid:${uid}`;
   const userNotifQuery = useCallback(() => {
-    if (!isReady) return null;
+    if (!isReady || !db) return null;
     try {
-      const { db } = require("@/lib/firebaseConfig");
-      const { collection, query, where, orderBy, limit } = require("firebase/firestore");
-      if (!db) return null;
       return query(
         collection(db, "notifications"),
         where("recipientId", "==", uid),
