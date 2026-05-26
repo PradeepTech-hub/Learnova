@@ -43,6 +43,7 @@ const [email, setEmail] = useState("");
 const [password, setPassword] = useState("");
 const [fullName, setFullName] = useState("");
 const [instituteName, setInstituteName] = useState("");
+const [inviteCode, setInviteCode] = useState("");
 
 // UI state
 const [isLoading, setIsLoading] = useState(false);
@@ -76,6 +77,7 @@ setEmail("");
 setPassword("");
 setFullName("");
 setInstituteName("");
+setInviteCode("");
 };
 
 const handleToggleLogin = () => {
@@ -87,6 +89,7 @@ setPassword("");
 if (!isLogin) {
   setFullName("");
   setInstituteName("");
+  setInviteCode("");
 }
 ```
 
@@ -102,6 +105,7 @@ const formData = {
   password,
   fullName,
   instituteName,
+  inviteCode,
 };
 
 const { isValid, errors: validationErrors } = validateForm(
@@ -126,6 +130,7 @@ try {
     result = await signupWithEmail(email, password, selectedRole, {
       fullName,
       instituteName,
+      inviteCode,
     });
   }
 
@@ -309,6 +314,8 @@ return ( <div className="min-h-screen pt-10 bg-background"> <Navbar />
                   setFullName={setFullName}
                   instituteName={instituteName}
                   setInstituteName={setInstituteName}
+                  inviteCode={inviteCode}
+                  setInviteCode={setInviteCode}
                   errors={errors}
                   setErrors={setErrors}
                   isLoading={isLoading}
