@@ -579,7 +579,7 @@ export default function UniversalProfile() {
               {getUserPhoto() && !imageError ? (
                 <Image
                   src={getUserPhoto()}
-                  alt="Profile"
+                  alt={`${getUserDisplayName()} profile photo`}
                   width={120}
                   height={120}
                   onError={() =>

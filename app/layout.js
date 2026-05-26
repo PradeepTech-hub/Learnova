@@ -15,6 +15,7 @@ import PageTransition from "@/components/PageTransition";
 import ScrollToTop from "@/components/ScrollToTop";
 import BackToTop from "@/components/BackToTop";
 import OfflineIndicator from "@/components/OfflineIndicator";
+import ScrollProgress from "@/components/ui/ScrollProgress";
 import NextTopLoader from "nextjs-toploader";
 
 
@@ -235,6 +236,7 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body
+        suppressHydrationWarning
         className={`font-sans ${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground min-h-screen transition-colors duration-300`}
       >
         <a
@@ -246,6 +248,7 @@ export default function RootLayout({ children }) {
           {/* Cursor glow removed per UX preference */}
           
         <ThemeProvider>
+          <ScrollProgress />
           <NextTopLoader
             color="#4f46e5"
             initialPosition={0.08}

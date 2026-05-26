@@ -1,12 +1,9 @@
 import { jsonSuccess, jsonError } from "@/lib/api-response";
-import { authenticateRequest } from "@/lib/error-handler";
+import { authenticateRequest, parseJSON } from "@/lib/error-handler";
 import { AppError, ValidationError } from "@/lib/errors";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
-
-const GROQ_API_URL =
-  "https://api.groq.com/openai/v1/chat/completions";
 
 import { checkRateLimit } from "@/lib/rateLimit";
 import { detectInjection, sanitizeMessage, buildSecureMessages } from "@/utils/promptGuard";
@@ -59,7 +56,7 @@ export async function POST(request) {
     }
 
     // Parse body
-    const body = await request.json();
+    const body = await parseJSON(request, 1024 * 10);
 
     const validation = groqSchema.safeParse(body);
     if (!validation.success) {
