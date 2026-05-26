@@ -25,8 +25,7 @@ async function publishNotice(request) {
 
   const body = await parseJSON(request, 1024 * 50);
   const validData = noticeSchema.parse(body);
-
-
+  const adminDb = getAdminDb();
 
   const newNotice = {
     ...validData,
