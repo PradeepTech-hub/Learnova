@@ -5,7 +5,6 @@ import { connectDb } from "@/lib/mongodb";
 import { jsonError, jsonSuccess } from "@/lib/api-response";
 import { suggestEmailCorrection } from "@/utils/emailValidation";
 import { verifyFirebaseToken } from "@/lib/firebase-admin";
-import xss from "xss";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set([
@@ -18,12 +17,17 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const normalizeText = (value) =>
   typeof value === "string" ? value.trim() : "";
 
-const getImageExtension = (mimeType) => {
-
-import {
-  jsonError,
-  jsonSuccess,
-} from "@/lib/api-response";
+const sanitizeHtml = (text) => {
+  if (typeof text !== "string") return "";
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;")
+    .replace(/\//g, "&#x2F;")
+    .trim();
+};
 
 // Ensure unique indexes are created exactly once per process lifetime.
 // This is the database-level safety net that prevents duplicate users
@@ -219,11 +223,7 @@ const validateMagicBytes = (
   return true;
 };
 
-    const formData = await req.formData();
-    const name = xss(normalizeText(formData.get("name")));
-    const rollNo = xss(normalizeText(formData.get("rollNo")));
-    const email = normalizeText(formData.get("email")).toLowerCase();
-    const file = formData.get("photo");
+
 export const POST =
   withErrorHandler(
     async (req) => {
@@ -305,6 +305,9 @@ export const POST =
         email,
       } =
         validationResult.data;
+
+      const sanitizedName = sanitizeHtml(name);
+      const sanitizedRollNo = sanitizeHtml(rollNo);
 
       // Validate file
       if (
@@ -447,8 +450,8 @@ export const POST =
 
       try {
         const user = {
-          name,
-          rollNo,
+          name: sanitizedName,
+          rollNo: sanitizedRollNo,
           email,
           image:
             blob.url,
