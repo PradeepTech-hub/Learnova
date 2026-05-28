@@ -8,6 +8,7 @@ import { withErrorHandler, parseJSON } from "@/lib/error-handler";
 import { requireAuth } from "@/lib/rbac";
 import { ValidationError, ForbiddenError, AppError } from "@/lib/errors";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -157,7 +158,7 @@ export const PATCH = withErrorHandler(async (request) => {
       { upsert: true }
     );
   } catch (error) {
-    console.error("Settings sync error:", error);
+    logger.error("Settings sync error:", { error: error.message });
     throw new AppError("Failed to update user settings database entry.", 500);
   }
 
@@ -175,9 +176,9 @@ export const PATCH = withErrorHandler(async (request) => {
       try {
         await admin.firestore().collection("users").doc(targetUserId).update(firestoreProfileUpdate);
 
-                console.log(`[Firestore Sync] Profile synced for user: ${targetUserId}`);
+        logger.info(`[Firestore Sync] Profile synced for user: ${targetUserId}`);
       } catch (syncError) {
-        console.error("Firestore profile sync failed:", syncError);
+        logger.error("Firestore profile sync failed:", { error: syncError.message });
       }
     }
   }
