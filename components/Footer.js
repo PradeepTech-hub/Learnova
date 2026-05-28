@@ -70,6 +70,7 @@ export default function Footer() {
     { label: "Impact", href: "/#impact" },
   ];
 
+  
   const socialLinks = [
     { icon: Github, href: "https://github.com/Premshaw23/Learnova", label: "GitHub", glow: "purple" },
     { icon: Twitter, href: "https://twitter.com/learnova", label: "Twitter", glow: "blue" },
