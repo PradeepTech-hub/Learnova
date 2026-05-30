@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { del } from "@vercel/blob";
 import { requireAuth } from "@/lib/rbac";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { connectDb } from "@/lib/mongodb";
@@ -41,15 +42,13 @@ export const POST = async (request) => {
 
     console.log("File received:", file.name, file.size, file.type);
 
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
+    if (file.size <= 0) {
       return NextResponse.json(
-        { error: "Invalid file type. Please upload an image." },
+        { error: "File is empty" },
         { status: 400 }
       );
     }
 
-    // Validate file size
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
         { error: "File size exceeds 5MB limit" },
@@ -115,17 +114,10 @@ export const POST = async (request) => {
       );
     }
     
-    if (error.message && error.message.includes("File size")) {
-      return NextResponse.json(
-        { error: "File size exceeds 5MB limit" },
-        { status: 400 }
-      );
-    }
-
-    if (error.message && error.message.includes("Invalid image")) {
+    if (error.statusCode && error.statusCode < 500) {
       return NextResponse.json(
         { error: error.message },
-        { status: 400 }
+        { status: error.statusCode }
       );
     }
 
