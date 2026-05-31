@@ -211,6 +211,8 @@ BLOB_READ_WRITE_TOKEN=your_vercel_blob_token
 NEXT_PUBLIC_EMAILJS_SERVICE_ID=your_service_id
 NEXT_PUBLIC_EMAILJS_TEMPLATE_ID=your_template_id
 NEXT_PUBLIC_EMAILJS_USER_ID=your_user_id
+NEXT_PUBLIC_CONTACT_RECEIVER_EMAIL=your-actual-admin-email@example.com
+NEXT_PUBLIC_CONTACT_RECEIVER_NAME=Learnova Administration
 ```
 
 ### 4. Run the development server
