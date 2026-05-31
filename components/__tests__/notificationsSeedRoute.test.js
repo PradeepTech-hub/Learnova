@@ -3,9 +3,9 @@ import { connectDb } from "@/lib/mongodb";
 import { verifyFirebaseToken, getUserProfile } from "@/lib/firebase-admin";
 import { checkRateLimit } from "@/lib/rateLimit";
 
-jest.mock("next/server", () => ({
+vi.mock("next/server", () => ({
   NextResponse: {
-    json: jest.fn().mockImplementation((body, init) => {
+    json: vi.fn().mockImplementation((body, init) => {
       return {
         status: init?.status || 200,
         json: async () => body,
@@ -15,17 +15,17 @@ jest.mock("next/server", () => ({
   },
 }));
 
-jest.mock("@/lib/firebase-admin", () => ({
-  verifyFirebaseToken: jest.fn(),
-  getUserProfile: jest.fn(),
+vi.mock("@/lib/firebase-admin", () => ({
+  verifyFirebaseToken: vi.fn(),
+  getUserProfile: vi.fn(),
 }));
 
-jest.mock("@/lib/mongodb", () => ({
-  connectDb: jest.fn(),
+vi.mock("@/lib/mongodb", () => ({
+  connectDb: vi.fn(),
 }));
 
-jest.mock("@/lib/rateLimit", () => ({
-  checkRateLimit: jest.fn(),
+vi.mock("@/lib/rateLimit", () => ({
+  checkRateLimit: vi.fn(),
 }));
 
 describe("POST /api/notifications/seed - Security and Validation Tests", () => {
@@ -34,21 +34,21 @@ describe("POST /api/notifications/seed - Security and Validation Tests", () => {
 
   beforeAll(() => {
     originalNodeEnv = process.env.NODE_ENV;
-    jest.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterAll(() => {
     process.env.NODE_ENV = originalNodeEnv;
-    console.error.mockRestore();
+    vi.restoreAllMocks();
   });
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    process.env.NODE_ENV = "development"; // Default to dev/test environment for tests
+    vi.clearAllMocks();
+    process.env.NODE_ENV = "development";
 
-    mockInsertMany = jest.fn().mockResolvedValue({ acknowledged: true });
+    mockInsertMany = vi.fn().mockResolvedValue({ acknowledged: true });
     connectDb.mockResolvedValue({
-      collection: jest.fn().mockReturnValue({
+      collection: vi.fn().mockReturnValue({
         insertMany: mockInsertMany,
       }),
     });
@@ -61,7 +61,7 @@ describe("POST /api/notifications/seed - Security and Validation Tests", () => {
       headers: {
         get: (name) => headers[name.toLowerCase()] || null,
       },
-      json: jest.fn().mockResolvedValue(bodyData),
+      json: vi.fn().mockResolvedValue(bodyData),
     };
   };
 
@@ -77,7 +77,8 @@ describe("POST /api/notifications/seed - Security and Validation Tests", () => {
     const body = await response.json();
 
     expect(response.status).toBe(403);
-    expect(body.error).toBe("Not allowed in production");
+    expect(body.error.message).toBe("Not allowed in production");
+    expect(body.error.code).toBe("HTTP_403");
     expect(mockInsertMany).not.toHaveBeenCalled();
   });
 
@@ -90,7 +91,8 @@ describe("POST /api/notifications/seed - Security and Validation Tests", () => {
     const body = await response.json();
 
     expect(response.status).toBe(401);
-    expect(body.error).toBe("Unauthorized");
+    expect(body.error.message).toBe("Unauthorized");
+    expect(body.error.code).toBe("HTTP_401");
     expect(mockInsertMany).not.toHaveBeenCalled();
   });
 
@@ -110,7 +112,8 @@ describe("POST /api/notifications/seed - Security and Validation Tests", () => {
     const body = await response.json();
 
     expect(response.status).toBe(403);
-    expect(body.error).toBe("Forbidden: Requires one of admin");
+    expect(body.error.message).toBe("Forbidden: Requires one of admin");
+    expect(body.error.code).toBe("HTTP_403");
     expect(mockInsertMany).not.toHaveBeenCalled();
   });
 
@@ -130,7 +133,8 @@ describe("POST /api/notifications/seed - Security and Validation Tests", () => {
     const body = await response.json();
 
     expect(response.status).toBe(400);
-    expect(body.error).toBe("userId is required");
+    expect(body.error.message).toBe("userId is required");
+    expect(body.error.code).toBe("HTTP_400");
     expect(mockInsertMany).not.toHaveBeenCalled();
   });
 
@@ -145,14 +149,15 @@ describe("POST /api/notifications/seed - Security and Validation Tests", () => {
       headers: {
         get: (name) => (name.toLowerCase() === "authorization" ? "Bearer valid-admin-token" : null),
       },
-      json: jest.fn().mockRejectedValue(new Error("Parse error")),
+      json: vi.fn().mockRejectedValue(new Error("Parse error")),
     };
 
     const response = await POST(req);
     const body = await response.json();
 
     expect(response.status).toBe(400);
-    expect(body.error).toBe("Invalid JSON payload");
+    expect(body.error.message).toBe("Invalid JSON payload");
+    expect(body.error.code).toBe("HTTP_400");
     expect(mockInsertMany).not.toHaveBeenCalled();
   });
 
@@ -173,7 +178,8 @@ describe("POST /api/notifications/seed - Security and Validation Tests", () => {
     const body = await response.json();
 
     expect(response.status).toBe(429);
-    expect(body.error).toBe("Too many requests. Please slow down.");
+    expect(body.error.message).toBe("Too many requests. Please slow down.");
+    expect(body.error.code).toBe("HTTP_429");
     expect(mockInsertMany).not.toHaveBeenCalled();
   });
 
