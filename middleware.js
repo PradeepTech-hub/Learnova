@@ -26,14 +26,79 @@ function isAuthRoute(pathname) {
   return AUTH_RATE_LIMITED_PATHS.some((path) => pathname.startsWith(path));
 }
 
-function rateLimit(ip, pathname) {
+let lastCleanupTime = Date.now();
+const MAP_CLEANUP_INTERVAL_MS = 60 * 1000;
+
+async function rateLimitUpstash(ip, pathname) {
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+
+  if (!url || !token) {
+    return null; // Fallback to in-memory
+  }
+
+  const key = `ratelimit:${ip}:${pathname}`;
+  const windowSeconds = Math.ceil(RATE_LIMIT_WINDOW_MS / 1000);
+
+  try {
+    const response = await fetch(`${url}/pipeline`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify([
+        ["INCR", key],
+        ["EXPIRE", key, windowSeconds],
+        ["TTL", key],
+      ]),
+    });
+
+    if (!response.ok) {
+      console.warn("[rate-limit] Upstash request failed, falling back to in-memory");
+      return null;
+    }
+
+    const data = await response.json();
+    const count = data[0]?.result;
+    const ttl = data[2]?.result;
+
+    if (typeof count !== "number") {
+      return null;
+    }
+
+    const retryAfter = typeof ttl === "number" && ttl > 0 ? ttl : windowSeconds;
+
+    if (count > RATE_LIMIT_MAX) {
+      return { allowed: false, remaining: 0, retryAfter };
+    }
+
+    return { allowed: true, remaining: RATE_LIMIT_MAX - count, retryAfter };
+  } catch (err) {
+    console.warn("[rate-limit] Upstash error, falling back to in-memory:", err);
+    return null;
+  }
+}
+
+function rateLimitFallback(ip, pathname) {
   const key = `${ip}_${pathname}`;
   const now = Date.now();
+
+  // Periodic cleanup to avoid memory leaks
+  if (now - lastCleanupTime > MAP_CLEANUP_INTERVAL_MS) {
+    for (const [k, entry] of rateLimitMap.entries()) {
+      if (now > entry.resetTime) {
+        rateLimitMap.delete(k);
+      }
+    }
+    lastCleanupTime = now;
+  }
+
   const entry = rateLimitMap.get(key);
 
   if (!entry || now > entry.resetTime) {
     rateLimitMap.set(key, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
-    return { allowed: true, remaining: RATE_LIMIT_MAX - 1 };
+    return { allowed: true, remaining: RATE_LIMIT_MAX - 1, retryAfter: Math.ceil(RATE_LIMIT_WINDOW_MS / 1000) };
   }
 
   if (entry.count >= RATE_LIMIT_MAX) {
@@ -42,7 +107,15 @@ function rateLimit(ip, pathname) {
   }
 
   entry.count += 1;
-  return { allowed: true, remaining: RATE_LIMIT_MAX - entry.count };
+  return { allowed: true, remaining: RATE_LIMIT_MAX - entry.count, retryAfter: Math.ceil((entry.resetTime - now) / 1000) };
+}
+
+async function rateLimit(ip, pathname) {
+  const upstashResult = await rateLimitUpstash(ip, pathname);
+  if (upstashResult !== null) {
+    return upstashResult;
+  }
+  return rateLimitFallback(ip, pathname);
 }
 
 // ─── CSP ──────────────────────────────────────────────────────────────────────
@@ -166,7 +239,7 @@ export async function middleware(request) {
       request.headers.get("x-real-ip") ||
       "unknown";
 
-    const { allowed, remaining, retryAfter } = rateLimit(ip, pathname);
+    const { allowed, remaining, retryAfter } = await rateLimit(ip, pathname);
 
     if (!allowed) {
       return NextResponse.json(
