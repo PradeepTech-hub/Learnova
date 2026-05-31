@@ -25,6 +25,8 @@ import ReactMarkdown from "react-markdown";
 import { useTheme } from "next-themes";
 
 import { useAuthContext } from "@/contexts/AuthContext";
+import { apiFetch } from "@/lib/apiClient";
+
 
 // ---------------------------------------------------------------------------
 // Constants — centralized
@@ -289,7 +291,7 @@ async function generateBotResponse(userMessage, currentCategory, idToken, update
     const headers = { "Content-Type": "application/json" };
     if (idToken) headers["Authorization"] = `Bearer ${idToken}`;
     
-    const response = await fetch("/api/groq", {
+    const response = await apiFetch("/api/groq", {
       method: "POST",
       headers,
       body: JSON.stringify({ 
@@ -318,7 +320,7 @@ async function generateBotResponse(userMessage, currentCategory, idToken, update
 async function saveConversation(userText, botText, idToken) {
   if (!idToken) return;
   try {
-    await fetch("/api/conversations", {
+    await apiFetch("/api/conversations", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -445,7 +447,7 @@ export default function LearnovaChatbot() {
       setIsHistoryLoading(true);
       try {
         const idToken = await user.getIdToken();
-        const response = await fetch("/api/conversations", {
+        const response = await apiFetch("/api/conversations", {
           headers: {
             Authorization: `Bearer ${idToken}`,
           },

@@ -39,6 +39,8 @@ import SkeletonCard from "@/components/ui/SkeletonCard";
 import { useAuth } from "@/hooks/useAuth";
 import { getOutboxRecords, removeFromOutbox, clearOutbox } from "@/lib/offlineStore";
 import { syncAttendanceQueue } from "@/lib/syncService";
+import { apiFetch } from "@/lib/apiClient";
+
 
 const AttendanceTrendsChart = dynamic(
   () => import("@/components/charts/AttendanceTrendsChart"),
@@ -176,7 +178,7 @@ const SuperAdminDashboard = () => {
     const fetchStats = async () => {
       try {
         const token = await user.getIdToken();
-        const res = await fetch("/api/admin/stats", {
+        const res = await apiFetch("/api/admin/stats", {
           headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
         });

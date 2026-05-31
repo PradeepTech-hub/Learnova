@@ -72,6 +72,8 @@ import { AttendancePasscodeModal } from "./dashboard/AttendancePasscodeModal";
 import { ExceptionRequestsList } from "./dashboard/ExceptionRequestsList";
 import { useAttendance } from "@/hooks/useAttendance";
 import { useCurriculum } from "@/hooks/useCurriculum";
+import { apiFetch } from "@/lib/apiClient";
+
 
 const AttendanceTrendsChart = dynamic(
   () => import("@/components/charts/AttendanceTrendsChart"),
@@ -152,7 +154,7 @@ const TeacherDashboard = () => {
 
     try {
       const token = await user.getIdToken();
-      const response = await fetch("/api/exceptions/list", {
+      const response = await apiFetch("/api/exceptions/list", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -295,7 +297,7 @@ const TeacherDashboard = () => {
     setIsLoadingRequests(true);
     try {
       const token = await user.getIdToken();
-      const response = await fetch("/api/exceptions/all", {
+      const response = await apiFetch("/api/exceptions/all", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -364,7 +366,7 @@ const TeacherDashboard = () => {
   const handleExceptionRequest = async (id, action) => {
     try {
       const token = await user.getIdToken();
-      const response = await fetch("/api/exceptions/update", {
+      const response = await apiFetch("/api/exceptions/update", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -467,7 +469,7 @@ const TeacherDashboard = () => {
       }
 
       const token = await user.getIdToken();
-      const res = await fetch("/api/attendance/settings", {
+      const res = await apiFetch("/api/attendance/settings", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -498,7 +500,7 @@ const TeacherDashboard = () => {
     setPasscodeLoading(true);
     try {
       const token = await user.getIdToken();
-      const res = await fetch("/api/attendance/settings", {
+      const res = await apiFetch("/api/attendance/settings", {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
