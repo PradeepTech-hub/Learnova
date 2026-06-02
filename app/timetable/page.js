@@ -8,21 +8,57 @@ export default function TimetablePage() {
   const [level, setLevel] = useState("Beginner");
   const [topics, setTopics] = useState("");
   const [generated, setGenerated] = useState(false);
+  const [milestones, setMilestones] = useState([
+    false,
+    false,
+    false,
+    false,
+]);
   const [progress, setProgress] = useState(0);
+
+  const [roadmap, setRoadmap] = useState([]);
 
   const topicList = topics
     .split(",")
     .map((t) => t.trim())
     .filter(Boolean);
 
+    
   const generatePlan = () => {
-    if (!goal || !hours || !topics) {
-      alert("Please fill all fields");
-      return;
-    }
-    setGenerated(true);
-    setProgress(25);
-  };
+  if (!goal || !hours || !topics) {
+    alert("Please fill all fields");
+    return;
+  }
+
+  let generatedRoadmap = [];
+
+  if (level === "Beginner") {
+    generatedRoadmap = [
+      "Foundation & Basics",
+      "Core Concepts",
+      "Practice Problems",
+      "Projects & Interview Prep",
+    ];
+  } else if (level === "Intermediate") {
+    generatedRoadmap = [
+      "Advanced Concepts",
+      "Problem Solving",
+      "Real Projects",
+      "Interview Preparation",
+    ];
+  } else {
+    generatedRoadmap = [
+      "System Design",
+      "Advanced Projects",
+      "Open Source Contributions",
+      "Career Preparation",
+    ];
+  }
+
+  setRoadmap(generatedRoadmap);
+  setGenerated(true);
+  setProgress(25);
+};
 
   return (
     <div className="min-h-screen bg-background pt-24 pb-12 px-4">
