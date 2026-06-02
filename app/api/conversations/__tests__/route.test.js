@@ -22,6 +22,22 @@ vi.mock("groq-sdk", () => {
   };
 });
 
+vi.mock("groq-sdk", () => {
+  return {
+    Groq: vi.fn().mockImplementation(() => {
+      return {
+        chat: {
+          completions: {
+            create: vi.fn().mockResolvedValue((async function* () {
+              yield { choices: [{ delta: { content: "Mocked response" } }] };
+            })()),
+          },
+        },
+      };
+    }),
+  };
+});
+
 vi.mock("@/lib/rbac", () => ({
   requireAuth: vi.fn(),
 }));
@@ -33,6 +49,11 @@ vi.mock("@/lib/rateLimit", () => ({
 vi.mock("@/utils/promptGuard", () => ({
   detectInjection: vi.fn(),
   sanitizeMessage: vi.fn((msg) => msg),
+  buildSecureMessages: vi.fn((userMessage, baseSystemPrompt, history = []) => [
+    { role: "system", content: baseSystemPrompt },
+    ...history,
+    { role: "user", content: userMessage }
+  ]),
 }));
 
 vi.mock("groq-sdk", () => {
