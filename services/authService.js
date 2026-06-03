@@ -37,6 +37,11 @@ const syncCustomClaims = async ({ user, role, fullName }) => {
     if (response.ok) {
       // Force refresh token so the custom claims are present in the client-side session immediately
       await user.getIdToken(true).catch(() => {});
+    } else {
+      const errorData = await response.json().catch(() => ({}));
+      if (errorData?.error?.includes('already registered')) {
+        await user.getIdToken(true).catch(() => {});
+      }
     }
   } catch {
     // Keep login non-blocking if claim migration fails.
@@ -102,7 +107,7 @@ export const loginWithEmail = async (email, password, selectedRole) => {
     // Update last login
     await setDoc(doc(db, "users", user.uid), {
       lastLogin: new Date(),
-    });
+    }, { merge: true });
 
     return { success: true, userData: { role: userRole } };
   } catch (err) {
@@ -315,7 +320,7 @@ export const loginWithGoogle = async (selectedRole, isLogin, additionalData) => 
     // Update last login for existing users
     await setDoc(doc(db, "users", user.uid), {
       lastLogin: new Date(),
-    });
+    }, { merge: true });
 
     return { success: true, userData: { role: userRole || selectedRole } };
   } catch (err) {

@@ -8,7 +8,9 @@ import { checkRateLimit } from "@/lib/rateLimit";
 import { AppError } from "@/lib/errors";
 import { awardXp } from "@/lib/gamification-service";
 import { executeSaga } from "@/lib/transactionCoordinator";
+import { connectDb } from "@/lib/mongodb";
 import { z } from "zod";
+
 
 export const dynamic = "force-dynamic";
 
@@ -91,8 +93,18 @@ async function handleSync(request) {
     );
   }
 
+  if (!userProfile?.instituteId) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "User profile missing institute affiliation. Cannot sync attendance.",
+      },
+      { status: 403 },
+    );
+  }
+
   const serverIdentity = resolveAttendanceIdentity(decodedToken, userProfile);
-  const instituteId = userProfile?.instituteId || null;
+  const instituteId = userProfile.instituteId;
   
   const successfulIds = [];
   const rejectedIds = [];
@@ -181,6 +193,34 @@ async function handleSync(request) {
           compensate: null, // Attendance writes are append-only; no rollback needed
         },
         {
+          name: "write_mongodb_attendance",
+          execute: async () => {
+            const mongoDB = await connectDb();
+            await mongoDB.collection("attendance").updateOne(
+              { userId: decodedToken.uid, date: recordDate },
+              {
+                $set: {
+                  userId: decodedToken.uid,
+                  studentName: serverIdentity.studentName,
+                  email: serverIdentity.email,
+                  instituteId,
+                  timestamp: new Date(record.queuedAt),
+                  date: recordDate,
+                  status: "present",
+                  confidenceScore: normalizedConfidence,
+                  offlineSynced: true,
+                  queuedAt: new Date(record.queuedAt),
+                },
+              },
+              { upsert: true }
+            );
+          },
+          compensate: async () => {
+            const mongoDB = await connectDb();
+            await mongoDB.collection("attendance").deleteOne({ userId: decodedToken.uid, date: recordDate });
+          },
+        },
+        {
           name: "award_xp",
           execute: async () => {
             await awardXp(decodedToken.uid, "attendance_marked", {
@@ -192,9 +232,15 @@ async function handleSync(request) {
       ],
     });
 
-    successfulIds.push(record.id);
-
-    processedUserDates.add(userDateKey);
+    if (sagaResult.success) {
+      successfulIds.push(record.id);
+      processedUserDates.add(userDateKey);
+    } else {
+      console.error(`[attendance-sync] Saga failed for user ${decodedToken.uid} date ${recordDate}: ${sagaResult.error}`);
+      if (record.id !== undefined) {
+        rejectedIds.push(record.id);
+      }
+    }
   }
 
   return NextResponse.json({
