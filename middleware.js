@@ -3,6 +3,22 @@ import * as jose from "jose";
 import { Redis } from "@upstash/redis";
 import { validateCsrfOriginAndReferer, validateCsrfRequest } from "@/lib/csrf";
 
+let redisClient;
+
+function getRedisClient() {
+  if (
+    !redisClient &&
+    process.env.UPSTASH_REDIS_REST_URL &&
+    process.env.UPSTASH_REDIS_REST_TOKEN
+  ) {
+    redisClient = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
+  }
+  return redisClient;
+}
+
 const FIREBASE_PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 const FIREBASE_AUTH_DOMAIN = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
 const FIREBASE_API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
@@ -268,6 +284,28 @@ export async function middleware(request) {
       isTokenValid = true;
       isEmailVerified = !!payload.email_verified;
       userRole = payload.role || null;
+    }
+  }
+
+  if (isTokenValid && pathname.startsWith("/api/")) {
+    const sessionId =
+      request.cookies.get("sessionId")?.value ||
+      request.headers.get("x-session-id");
+    if (sessionId) {
+      try {
+        const redis = getRedisClient();
+        if (redis) {
+          const exists = await redis.exists(`session:${sessionId}`);
+          if (exists !== 1) {
+            return NextResponse.json(
+              { error: "Session expired or terminated concurrently" },
+              { status: 401 }
+            );
+          }
+        }
+      } catch {
+        // Redis unavailable — continue without session validation
+      }
     }
   }
 
