@@ -46,5 +46,10 @@
       "downloadReport": "रिपोर्ट डाउनलोड करें",
       "contactTeacher": "शिक्षक से संपर्क करें"
     }
+  },
+  "ChatBot": {
+    "placeholder": "अपना संदेश यहाँ टाइप करें...",
+    "sendButton": "भेजें",
+    "welcomeMessage": "नमस्ते! आज मैं आपकी क्या मदद कर सकता हूँ?"
   }
 }
