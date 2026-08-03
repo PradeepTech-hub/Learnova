@@ -38,6 +38,12 @@ const exceptionUpdateSchema = z.object({
 export const PUT = withErrorHandler(async (request) => {
   const decodedToken = await requireAuth(request);
   const profile = await getUserProfile(decodedToken.uid);
+  if (!profile) {
+    throw new ForbiddenError("Forbidden: User profile not found.");
+  }
+  if (profile.role === "student") {
+    throw new ForbiddenError("Forbidden: Students cannot update exceptions.");
+  }
   const ip = request.headers.get("x-forwarded-for") || "127.0.0.1";
   const rateLimitResult = await checkRateLimit(
     `exceptions_update_${ip}_${decodedToken.uid}`
@@ -148,7 +154,11 @@ export const PUT = withErrorHandler(async (request) => {
       updateFields.comments = comments;
     }
 
-    const updateQuery = { _id: new ObjectId(exceptionId) };
+    const updateQuery = {
+      _id: new ObjectId(exceptionId),
+      status: "pending",
+    };
+
     if (userInstituteId) {
       updateQuery.instituteId = userInstituteId;
     }
@@ -160,7 +170,24 @@ export const PUT = withErrorHandler(async (request) => {
     throw new AppError("Internal server error", 500);
   }
 
-  if (result.matchedCount === 0) throw new NotFoundError("Exception not found");
+  if (result.matchedCount === 0) {
+    const existing = await db.collection("exceptions").findOne(
+      { _id: new ObjectId(exceptionId) },
+      { projection: { status: 1 } }
+    );
+
+    if (!existing) {
+      throw new NotFoundError("Exception not found");
+    }
+
+    if (existing.status !== "pending") {
+      throw new AppError("Exception already decided", 409);
+    }
+
+    throw new ForbiddenError(
+      "Forbidden: You are not authorized to update this exception."
+    );
+  }
 
   await db.collection("audit_logs").insertOne({
     timestamp: new Date(),
